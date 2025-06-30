@@ -21,10 +21,10 @@ bool enableSeDebugPrivilege() {
   }
   TOKEN_PRIVILEGES newState;
   newState.PrivilegeCount = 1;
-  newState.Privileges[0].Attributes = true;
+  newState.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
   newState.Privileges[0].Luid = luid;
-  if (!AdjustTokenPrivileges(tokenHandle, false, &newState, sizeof(TOKEN_PRIVILEGES), nullptr,
-                             0)) {
+  if (!AdjustTokenPrivileges(tokenHandle, false, &newState,
+                             sizeof(TOKEN_PRIVILEGES), nullptr, 0)) {
     return false;
   }
   return true;
@@ -41,7 +41,6 @@ int main(int argc, char *argv[]) {
     cout << "Make sure PID is a valid positive integer" << endl;
     exit(ERROR_EXIT_STATUS_CODE);
   }
-  cout << "ASDDASD" << endl;
   if (!enableSeDebugPrivilege()) {
     cout << "Changing privileges failed" << endl;
     exit(ERROR_EXIT_STATUS_CODE);
@@ -67,7 +66,12 @@ int main(int argc, char *argv[]) {
     exit(ERROR_EXIT_STATUS_CODE);
   }
 
-  CreateRemoteThread(processHandle, nullptr, 0,
-                     reinterpret_cast<LPTHREAD_START_ROUTINE>(LoadLibraryA),
-                     remoteProcessBuf, 0, nullptr);
+  HANDLE threadHandle =
+      CreateRemoteThread(processHandle, nullptr, 0,
+                         reinterpret_cast<LPTHREAD_START_ROUTINE>(LoadLibraryA),
+                         remoteProcessBuf, 0, nullptr);
+  if (!threadHandle) {
+    cout << "Creating thread handle failed: " << GetLastError() << endl;
+    exit(ERROR_EXIT_STATUS_CODE);
+  }
 }
