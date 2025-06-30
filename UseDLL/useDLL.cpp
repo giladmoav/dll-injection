@@ -9,43 +9,8 @@
 using std::cout;
 using std::endl;
 
-bool enableSeDebugPrivilege() {
-  HANDLE currentProcess = GetCurrentProcess();
-  HANDLE tokenHandle;
-  if (!OpenProcessToken(currentProcess, TOKEN_ALL_ACCESS, &tokenHandle)) {
-    return false;
-  }
-  LUID luid;
-  if (!LookupPrivilegeValue(nullptr, SE_DEBUG_NAME, &luid)) {
-    return false;
-  }
-  TOKEN_PRIVILEGES newState;
-  newState.PrivilegeCount = 1;
-  newState.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-  newState.Privileges[0].Luid = luid;
-  if (!AdjustTokenPrivileges(tokenHandle, false, &newState,
-                             sizeof(TOKEN_PRIVILEGES), nullptr, 0)) {
-    return false;
-  }
-  return true;
-}
-
-int main(int argc, char *argv[]) {
-  if (argc < 3) {
-    cout << "Usage: " << argv[0] << " PATH/TO/DLL PID" << endl;
-    exit(ERROR_EXIT_STATUS_CODE);
-  }
-  int pid = atoi(argv[2]);
-  char *dllPath = argv[1];
-  if (pid <= 0) {
-    cout << "Make sure PID is a valid positive integer" << endl;
-    exit(ERROR_EXIT_STATUS_CODE);
-  }
-  if (!enableSeDebugPrivilege()) {
-    cout << "Changing privileges failed" << endl;
-    exit(ERROR_EXIT_STATUS_CODE);
-  }
-
+/// inject a DLL (from dllPath) to a process with pid PID
+void injectDLL(int pid, char *dllPath) {
   HANDLE processHandle = OpenProcess(PROCESS_ALL_ACCESS, false, pid);
   if (!processHandle) {
     cout << "Creating process handle failed: " << GetLastError() << endl;
@@ -74,4 +39,20 @@ int main(int argc, char *argv[]) {
     cout << "Creating thread handle failed: " << GetLastError() << endl;
     exit(ERROR_EXIT_STATUS_CODE);
   }
+}
+
+int main(int argc, char *argv[]) {
+  if (argc < 3) {
+    cout << "Usage: " << argv[0] << " PATH/TO/DLL PID" << endl;
+    exit(ERROR_EXIT_STATUS_CODE);
+  }
+  int pid = atoi(argv[2]);
+  char *dllPath = argv[1];
+
+  if (pid <= 0) {
+    cout << "Make sure PID is a valid positive integer" << endl;
+    exit(ERROR_EXIT_STATUS_CODE);
+  }
+
+  injectDLL(pid, dllPath);
 }
